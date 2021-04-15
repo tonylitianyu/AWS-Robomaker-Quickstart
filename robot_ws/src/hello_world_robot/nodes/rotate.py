@@ -27,16 +27,34 @@ class Rotator():
 
     def __init__(self):
         self._cmd_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.scan_sub = rospy.Subscriber('scan', LaserScan, self.laserscan_callback)
+        self.front_range = 100.0
+        self.rear_range = 100.0
+        self.forward = True
+        
+    
+    def laserscan_callback(self, msg):
+        self.front_range = msg.ranges[0]
+        self.rear_range = msg.ranges[len(msg.ranges)/2]
+        rospy.loginfo('Rotating robot: %s', self.front_range)
+        
 
     def rotate_forever(self):
         self.twist = Twist()
 
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
-            self.twist.linear.x = 0.1
-            #self.twist.angular.z = 0.1
+            if self.front_range < 0.50:
+                self.forward = False
+            elif self.rear_range < 0.50:
+                self.forward = True
+            
+            if self.forward:
+                self.twist.linear.x = 0.3
+            else:
+                self.twist.linear.x = -0.3
             self._cmd_pub.publish(self.twist)
-            rospy.loginfo('Rotating robot: %s', self.twist)
+
             r.sleep()
 
 
